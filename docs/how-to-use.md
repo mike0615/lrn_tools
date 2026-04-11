@@ -1,199 +1,104 @@
-# LRN Tools — How to Use
+# LRN Tools — Documentation Index
 
-This document covers detailed usage for every tool in this repository.
-
----
-
-## Table of Contents
-
-- [gen-reverse-zones.py — BIND 9 Reverse Zone Generator](#gen-reverse-zonespy)
+Full usage reference for all tools, interfaces, and configuration.
 
 ---
 
-## gen-reverse-zones.py
+## Contents
 
-**Location:** `tools/dns/gen-reverse-zones.py`  
-**Category:** DNS  
-**Requirements:** Python 3.6+, standard library only
-
-### Purpose
-
-Reads an existing BIND 9 forward lookup zone file and automatically generates one or more reverse lookup zone files containing the correct PTR records. It groups IPv4 hosts by `/24` subnet and IPv6 hosts by `/64` prefix, producing one reverse zone file per network block.
-
-Designed to eliminate the manual error-prone process of maintaining PTR records separately from A records.
-
----
-
-### Syntax
-
-```
-python3 gen-reverse-zones.py <forward-zone-file> [OPTIONS]
-```
-
----
-
-### Options
-
-| Option | Short | Description | Default |
-|--------|-------|-------------|---------|
-| `--output-dir DIR` | `-o` | Directory to write reverse zone files | `.` (current dir) |
-| `--nameserver NS` | `-n` | Override primary nameserver FQDN | Parsed from SOA |
-| `--email EMAIL` | `-e` | Override hostmaster email (dot notation) | Parsed from SOA |
-| `--ttl TTL` | `-t` | Override default TTL | Parsed from `$TTL` |
-| `--print-conf` | `-p` | Print `named.conf` zone stanza(s) to stdout | off |
-| `--no-ipv6` | | Skip AAAA records, do not generate IPv6 reverse zones | off |
-| `--dry-run` | | Print zone file content to stdout, do not write files | off |
+| Document | Description |
+|----------|-------------|
+| [Installation & Setup](install.md) | System requirements, install script, config scaffold |
+| [Configuration Reference](config-reference.md) | All `config.ini` settings explained |
+| [TUI Console](tui.md) | `lrn-admin` text-based menu — keys, layout, usage |
+| [Web Dashboard](web.md) | `lrn-web` Flask dashboard — startup, features, streaming |
+| **Tool Categories** | |
+| [DNS Tools](tools/dns.md) | gen-reverse-zones, dns-query-test, zone-consistency-check |
+| [FreeIPA Tools](tools/freeipa.md) | ipa-health-check, ipa-user-report, ipa-host-inventory |
+| [Certificate Tools](tools/certs.md) | cert-inventory, cert-expiry-check |
+| [System Tools](tools/system.md) | sysinfo, service-status, troubleshoot |
+| [KVM Tools](tools/kvm.md) | vm-list, vm-snapshot-report |
+| [DNF Tools](tools/dnf.md) | repo-health, updates-available |
+| [Docker Tools](tools/docker.md) | container-status, compose-health |
+| [Network Tools](tools/network.md) | connectivity-check, port-scan |
+| [Log Tools](tools/logs.md) | journal-errors, log-summary |
 
 ---
 
-### Examples
+## Quick Reference — All Tool Options
 
-#### Basic — generate reverse zones in current directory
-
-```bash
-python3 tools/dns/gen-reverse-zones.py /var/named/db.lrn.local
-```
-
-#### Write to `/var/named/` and show named.conf stanzas
-
-```bash
-python3 tools/dns/gen-reverse-zones.py /var/named/db.lrn.local \
-    -o /var/named \
-    --print-conf
-```
-
-#### Preview without writing any files
-
-```bash
-python3 tools/dns/gen-reverse-zones.py /var/named/db.lrn.local --dry-run
-```
-
-#### Override nameserver and hostmaster email
-
-Useful when the forward zone SOA is minimal or uses a placeholder:
-
-```bash
-python3 tools/dns/gen-reverse-zones.py /var/named/db.lrn.local \
-    -o /var/named \
-    -n ns1.lrn.local \
-    -e hostmaster.lrn.local \
-    --print-conf
-```
-
-#### Set a custom TTL for the reverse zone
-
-```bash
-python3 tools/dns/gen-reverse-zones.py /var/named/db.lrn.local \
-    -o /var/named \
-    -t 3600
-```
-
-#### Skip IPv6 (AAAA) records
-
-```bash
-python3 tools/dns/gen-reverse-zones.py /var/named/db.lrn.local \
-    -o /var/named \
-    --no-ipv6
-```
+| Tool | Path | Key Flags |
+|------|------|-----------|
+| `gen-reverse-zones` | `tools/dns/gen-reverse-zones.py` | `zone_file` `-o` `-n` `-e` `-t` `--print-conf` `--dry-run` |
+| `dns-query-test` | `tools/dns/dns-query-test.py` | `--name` `--type` `--server` |
+| `zone-consistency-check` | `tools/dns/zone-consistency-check.py` | `zone_file` `--server` |
+| `ipa-health-check` | `tools/freeipa/ipa-health-check.py` | `--server` |
+| `ipa-user-report` | `tools/freeipa/ipa-user-report.py` | `--locked` `--expiring` |
+| `ipa-host-inventory` | `tools/freeipa/ipa-host-inventory.py` | _(none)_ |
+| `cert-inventory` | `tools/certs/cert-inventory.py` | `--path` |
+| `cert-expiry-check` | `tools/certs/cert-expiry-check.py` | `--days` `--path` |
+| `sysinfo` | `tools/system/sysinfo.py` | _(none)_ |
+| `service-status` | `tools/system/service-status.py` | `--service` `--all-failed` |
+| `troubleshoot` | `tools/system/troubleshoot.py` | _(none)_ |
+| `vm-list` | `tools/kvm/vm-list.py` | `--running` |
+| `vm-snapshot-report` | `tools/kvm/vm-snapshot-report.py` | `--days` |
+| `repo-health` | `tools/dnf/repo-health.py` | _(none)_ |
+| `updates-available` | `tools/dnf/updates-available.py` | `--security-only` |
+| `container-status` | `tools/docker/container-status.py` | `--running` |
+| `compose-health` | `tools/docker/compose-health.py` | `--path` |
+| `connectivity-check` | `tools/network/connectivity-check.py` | `--host` |
+| `port-scan` | `tools/network/port-scan.py` | `--target` `--local` `--timeout` |
+| `journal-errors` | `tools/logs/journal-errors.py` | `--hours` `--unit` `--top` |
+| `log-summary` | `tools/logs/log-summary.py` | `--file` `--pattern` |
 
 ---
 
-### What It Parses
+## Universal Flags
 
-From the forward zone file the script extracts:
+Every tool (except `gen-reverse-zones.py`) accepts these flags:
 
-| Element | Used For |
-|---------|----------|
-| `$ORIGIN` | Resolving relative hostnames to FQDNs |
-| `$TTL` | Default TTL in generated zone |
-| `SOA` record | `mname`, `rname`, refresh/retry/expire/minimum timers |
-| `NS` records | Name server lines in the reverse zone |
-| `A` records | One PTR record per host, grouped by /24 |
-| `AAAA` records | One PTR record per host, grouped by /64 |
+| Flag | Description |
+|------|-------------|
+| `--json` | Emit machine-readable JSON to stdout instead of human output |
+| `--no-color` | Disable ANSI color codes (auto-detected on non-TTY) |
+| `--quiet` | Suppress informational output (warnings and errors still shown) |
+| `--config PATH` | Override config file path (default: `~/.lrn_tools/config.ini`) |
 
 ---
 
-### Output File Naming
+## Exit Codes
 
-| Record type | Network | Output filename |
-|-------------|---------|-----------------|
-| A (IPv4) | 192.168.1.x | `db.192.168.1` |
-| A (IPv4) | 10.0.10.x | `db.10.0.10` |
-| AAAA (IPv6) | fd00::/64 | `db.0-0-0-d-0-0-0-0-0-0-0-0-0-0-0-f` (nibble-reversed prefix) |
+| Code | Meaning |
+|------|---------|
+| `0` | Success — all checks passed |
+| `1` | Error — hard failure, tool could not complete or critical threshold exceeded |
+| `2` | Warning — tool ran successfully but found issues below critical threshold |
 
----
-
-### Sample Output
-
-Given a forward zone containing:
-
-```
-webserver   IN  A  192.168.1.10
-db01        IN  A  192.168.1.20
-mgmt        IN  A  192.168.1.1
-```
-
-The script produces `db.192.168.1`:
-
-```zone
-; Reverse lookup zone: 1.168.192.in-addr.arpa.
-; Generated by gen-reverse-zones.py on 2026-04-11 14:00:00
-;
-$TTL 86400
-$ORIGIN 1.168.192.in-addr.arpa.
-
-@           IN  SOA  ns1.lrn.local. hostmaster.lrn.local. (
-                    2026041101  ; Serial
-                    3600        ; Refresh
-                    900         ; Retry
-                    604800      ; Expire
-                    86400 )     ; Negative cache TTL
-
-; Name Servers
-            IN  NS  ns1.lrn.local.
-
-; PTR Records
-1           IN  PTR  mgmt.lrn.local.
-10          IN  PTR  webserver.lrn.local.
-20          IN  PTR  db01.lrn.local.
-```
+The `cert-expiry-check` tool specifically uses these codes so it can be called from cron or monitoring.
 
 ---
 
-### Integrating with named.conf
+## JSON Output Schema
 
-Use `--print-conf` to get ready-to-paste zone stanzas:
+All JSON-capable tools emit a consistent top-level structure:
 
-```named.conf
-zone "1.168.192.in-addr.arpa" IN {
-    type master;
-    file "/var/named/db.192.168.1";
-    allow-update { none; };
-};
+```json
+{
+  "tool": "sysinfo",
+  "timestamp": "2026-04-11T15:00:00Z",
+  "status": "ok",
+  "summary": "One-line human summary",
+  "records": [
+    { "column_a": "value", "column_b": "value", "Status": "OK" }
+  ],
+  "errors": []
+}
 ```
 
-Add each stanza to `/etc/named.conf` or your included zones file, then:
+| Field | Values | Description |
+|-------|--------|-------------|
+| `status` | `ok` / `warn` / `crit` / `error` / `mixed` | Overall tool result |
+| `records` | array of objects | Data rows; schema is tool-specific |
+| `errors` | array of strings | Non-fatal errors encountered during the run |
 
-```bash
-named-checkzone 1.168.192.in-addr.arpa /var/named/db.192.168.1
-systemctl reload named
-```
-
----
-
-### Supported Zone File Features
-
-- `$ORIGIN` and `$TTL` directives
-- Multi-line parenthesised SOA blocks
-- Relative names, `@`, and fully qualified names
-- Inline `;` comments
-- Optional TTL and class fields on individual RRs
-- Multiple subnets in a single forward zone (generates one file per /24)
-- IPv4 (`A`) and IPv6 (`AAAA`) records
-
-### Not Supported
-
-- `$INCLUDE` directives (included files are not recursively parsed)
-- CNAME chasing (CNAMEs are ignored; PTRs are only created for A/AAAA records)
-- Classless `/` delegation notation in PTR owner names
-- `GENERATE` directives
+The web dashboard consumes this schema to render status badges and sortable tables.
