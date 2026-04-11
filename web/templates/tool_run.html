@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% block title %}{{ tool.name }} — {{ site_name }}{% endblock %}
+{% block page_title %}{{ tool.category }} / {{ tool.name }}{% endblock %}
+
+{% block content %}
+<div class="tool-page">
+  <div class="tool-header">
+    <p class="tool-desc">{{ tool.description }}</p>
+  </div>
+
+  <!-- Args form -->
+  <div class="tool-form-card">
+    <div class="form-title">Run Options</div>
+    <div class="form-row">
+      <label for="tool-args">Additional Arguments</label>
+      <input type="text" id="tool-args" placeholder="e.g. --hours 48 --unit named" class="args-input">
+    </div>
+    <div class="form-actions">
+      <button id="btn-run" class="btn btn-primary" onclick="runTool()">&#9654; Run</button>
+      <button id="btn-stream" class="btn btn-secondary" onclick="streamTool()">&#9654;&#9654; Stream (live)</button>
+      <button class="btn btn-ghost" onclick="clearOutput()">&#10005; Clear</button>
+      <label class="toggle-label">
+        <input type="checkbox" id="json-toggle" onchange="toggleView()"> JSON view
+      </label>
+    </div>
+  </div>
+
+  <!-- Status bar -->
+  <div class="run-status" id="run-status"></div>
+
+  <!-- Output area -->
+  <div class="output-section">
+    <div class="output-header">
+      <span>Output</span>
+      <button class="btn-copy" onclick="copyOutput()">&#128203; Copy</button>
+    </div>
+    <!-- Raw terminal output -->
+    <pre class="terminal" id="raw-output">Press Run to execute the tool.</pre>
+    <!-- JSON report view (hidden by default) -->
+    <div id="json-output" class="json-report" style="display:none"></div>
+  </div>
+</div>
+
+<script>
+const TOOL_ID = {{ tool.id | tojson }};
+const TOOL_NAME = {{ tool.name | tojson }};
+const JSON_CAPABLE = {{ tool.json_capable | tojson }};
+
+function setStatus(msg, cls) {
+  const el = document.getElementById('run-status');
+  el.textContent = msg;
+  el.className = 'run-status ' + (cls || '');
+}
+
+function clearOutput() {
+  document.getElementById('raw-output').textContent = '';
+  document.getElementById('json-output').innerHTML = '';
+}
+
+function copyOutput() {
+  const txt = document.getElementById('raw-output').textContent;
+  navigator.clipboard.writeText(txt).catch(() => {});
+}
+
+function toggleView() {
+  const json = document.getElementById('json-toggle').checked;
+  document.getElementById('raw-output').style.display = json ? 'none' : 'block';
+  document.getElementById('json-output').style.display = json ? 'block' : 'none';
+}
+
+function renderJsonReport(data) {
+  const container = document.getElementById('json-output');
+  if (!data || !data.json_data) {
+    container.innerHTML = '<p class="json-empty">No structured JSON output.</p>';
+    return;
+  }
+  const jd = data.json_data;
+  let html = `<div class="jd-header">
+    <span class="jd-tool">${jd.tool || ''}</span>
+    <span class="badge badge-${jd.status || 'ok'}">${(jd.status || 'ok').toUpperCase()}</span>
+    <span class="jd-ts">${jd.timestamp || ''}</span>
+  </div>`;
+  if (jd.summary) html += `<p class="jd-summary">${jd.summary}</p>`;
+  if (jd.errors && jd.errors.length) {
+    html += '<div class="jd-errors"><strong>Errors:</strong><ul>';
+    jd.errors.forEach(e => { html += `<li>${e}</li>`; });
+    html += '</ul></div>';
+  }
+  if (jd.records && jd.records.length) {
+    const cols = Object.keys(jd.records[0]);
+    html += '<div class="table-wrap"><table class="report-table"><thead><tr>';
+    cols.forEach(c => { html += `<th>${c}</th>`; });
+    html += '</tr></thead><tbody>';
+    jd.records.forEach(row => {
+      const status = (row.Status || row.status || '').toLowerCase();
+      html += `<tr class="row-${status}">`;
+      cols.forEach(c => {
+        let val = row[c] !== undefined ? row[c] : '';
+        if (c === 'Status' || c === 'status') {
+          html += `<td><span class="badge badge-${status}">${val}</span></td>`;
+        } else {
+          html += `<td>${val}</td>`;
+        }
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+  }
+  container.innerHTML = html;
+}
+
+function runTool() {
+  const args = document.getElementById('tool-args').value;
+  const rawOut = document.getElementById('raw-output');
+  rawOut.textContent = 'Running…';
+  setStatus('Running…', 'status-running');
+  document.getElementById('btn-run').disabled = true;
+
+  const form = new FormData();
+  form.append('args', args);
+
+  fetch(`/run/${TOOL_ID}`, { method: 'POST', body: form })
+    .then(r => r.json())
+    .then(data => {
+      rawOut.textContent = (data.stdout || '') + (data.stderr ? '\n--- STDERR ---\n' + data.stderr : '');
+      const ms = data.duration_ms ? ` (${data.duration_ms}ms)` : '';
+      const ok = data.exit_code === 0;
+      setStatus(`Exited: ${data.exit_code}${ms}`, ok ? 'status-ok' : 'status-error');
+      if (JSON_CAPABLE && data.json_data) renderJsonReport(data);
+      if (document.getElementById('json-toggle').checked && data.json_data) {
+        renderJsonReport(data);
+      }
+    })
+    .catch(err => {
+      rawOut.textContent = `Request error: ${err}`;
+      setStatus('Error', 'status-error');
+    })
+    .finally(() => {
+      document.getElementById('btn-run').disabled = false;
+    });
+}
+
+function streamTool() {
+  const args = document.getElementById('tool-args').value;
+  const rawOut = document.getElementById('raw-output');
+  rawOut.textContent = '';
+  setStatus('Streaming…', 'status-running');
+  document.getElementById('btn-stream').disabled = true;
+
+  const url = `/stream/${TOOL_ID}?args=${encodeURIComponent(args)}`;
+  const es = new EventSource(url);
+
+  es.onmessage = (e) => {
+    const line = JSON.parse(e.data);
+    if (line.startsWith('__EXIT__')) {
+      const code = line.replace('__EXIT__', '');
+      setStatus(`Exited: ${code}`, code === '0' ? 'status-ok' : 'status-error');
+      es.close();
+      document.getElementById('btn-stream').disabled = false;
+    } else {
+      rawOut.textContent += line;
+      rawOut.scrollTop = rawOut.scrollHeight;
+    }
+  };
+  es.onerror = () => {
+    setStatus('Stream ended', 'status-warn');
+    es.close();
+    document.getElementById('btn-stream').disabled = false;
+  };
+}
+</script>
+{% endblock %}

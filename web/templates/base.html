@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}{{ site_name }} Admin{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <div class="layout">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">&#9650; LRN Tools</div>
+        <div class="site-name">{{ site_name }}</div>
+      </div>
+
+      <nav class="nav">
+        <a href="{{ url_for('index') }}" class="nav-home {% if request.endpoint == 'index' %}active{% endif %}">
+          &#8962; Dashboard
+        </a>
+        {% for cat in categories %}
+        <div class="nav-category">
+          <span class="cat-label">{{ cat }}</span>
+          {% for tool in tools_by_cat[cat] %}
+          <a href="{{ url_for('tool_page', tool_id=tool.id) }}"
+             class="nav-tool {% if request.view_args and request.view_args.get('tool_id') == tool.id %}active{% endif %}">
+            {{ tool.name }}
+          </a>
+          {% endfor %}
+        </div>
+        {% endfor %}
+      </nav>
+    </aside>
+
+    <!-- Main content -->
+    <main class="main">
+      <div class="topbar">
+        <span class="topbar-title">{% block page_title %}Dashboard{% endblock %}</span>
+        <span class="topbar-status" id="topbar-status"></span>
+      </div>
+      <div class="content">
+        {% block content %}{% endblock %}
+      </div>
+    </main>
+
+  </div>
+  <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

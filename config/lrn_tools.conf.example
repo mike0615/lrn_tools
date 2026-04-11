@@ -1,0 +1,86 @@
+# lrn_tools configuration file
+# Copy to ~/.lrn_tools/config.ini and edit for your site.
+#
+# Usage:
+#   mkdir -p ~/.lrn_tools
+#   cp config/lrn_tools.conf.example ~/.lrn_tools/config.ini
+#   vi ~/.lrn_tools/config.ini
+
+[general]
+site_name = LRN Lab
+default_format = table
+tool_timeout = 60
+
+[ipa]
+server = ipa01.lrn.local
+realm = LRN.LOCAL
+admin_principal = admin@LRN.LOCAL
+# keytab_path = /etc/lrn_tools/admin.keytab
+
+[dns]
+servers = 192.168.1.10 192.168.1.11
+domain = lrn.local
+named_conf = /etc/named.conf
+zone_dir = /var/named
+
+[certs]
+scan_paths =
+    /etc/pki/tls/certs
+    /etc/ipa/ca.crt
+    /etc/pki/ca-trust/source/anchors
+warn_days = 30
+critical_days = 7
+# ipa_nssdb = /etc/dirsrv/slapd-LRN-LOCAL
+
+[services]
+critical_services =
+    named,
+    dirsrv@LRN-LOCAL,
+    krb5kdc,
+    httpd,
+    ipa,
+    chronyd,
+    firewalld
+
+[kvm]
+libvirt_uri = qemu:///system
+snapshot_stale_days = 14
+
+[docker]
+compose_paths =
+    /opt/compose/monitoring
+    /opt/compose/registry
+
+[network]
+# Format: host:port:label  OR  host:icmp:label
+check_hosts =
+    192.168.1.1:icmp:gateway,
+    192.168.1.10:53:dns-primary,
+    192.168.1.10:443:ipa-https,
+    192.168.1.11:53:dns-secondary
+
+port_checks =
+    ipa01.lrn.local:389:ldap,
+    ipa01.lrn.local:636:ldaps,
+    ipa01.lrn.local:88:kerberos,
+    ipa01.lrn.local:443:ipa-https
+
+[logs]
+watch_files =
+    /var/log/messages,
+    /var/log/secure
+
+# patterns = name=regex (one per line)
+# patterns =
+#     custom_error=MY_APP_ERROR
+
+[web]
+host = 127.0.0.1
+port = 5000
+# Generate a random secret key for production:
+#   python3 -c "import secrets; print(secrets.token_hex(32))"
+secret_key = change-me-in-production
+debug = false
+
+[tui]
+color_scheme = default

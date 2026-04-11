@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}{{ site_name }} Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+  <p class="dashboard-intro">
+    Select a tool from the sidebar or click a category below.
+  </p>
+
+  {% for cat in categories %}
+  <div class="category-card">
+    <div class="category-header">
+      <span class="category-icon">
+        {% if cat == 'DNS' %}&#127760;
+        {% elif cat == 'FreeIPA' %}&#128272;
+        {% elif cat == 'Certificates' %}&#128203;
+        {% elif cat == 'System' %}&#128421;
+        {% elif cat == 'KVM' %}&#128424;
+        {% elif cat == 'DNF' %}&#128230;
+        {% elif cat == 'Docker' %}&#128025;
+        {% elif cat == 'Network' %}&#128225;
+        {% elif cat == 'Logs' %}&#128196;
+        {% else %}&#9881;
+        {% endif %}
+      </span>
+      <span class="category-name">{{ cat }}</span>
+      <span class="category-count">{{ tools_by_cat[cat]|length }} tools</span>
+    </div>
+    <div class="category-tools">
+      {% for tool in tools_by_cat[cat] %}
+      <a href="{{ url_for('tool_page', tool_id=tool.id) }}" class="tool-chip">
+        {{ tool.name }}
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}
