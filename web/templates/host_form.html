@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit' if action == 'edit' else 'Add' }} Host — {{ site_name }}{% endblock %}
+{% block page_title %}Remote Hosts / {{ 'Edit' if action == 'edit' else 'Add Host' }}{% endblock %}
+
+{% block content %}
+<div class="host-form-page">
+
+  {% if error %}
+  <div class="form-error-banner">{{ error }}</div>
+  {% endif %}
+
+  <form method="post" class="host-form" autocomplete="off">
+
+    <div class="form-card">
+      <div class="form-card-title">Identity</div>
+
+      <div class="hf-row">
+        <label for="f-name">Display Name <span class="req">*</span></label>
+        <input type="text" id="f-name" name="name"
+               value="{{ profile.name if profile else '' }}"
+               placeholder="e.g. IPA Primary, NS1, Webserver"
+               required class="hf-input">
+      </div>
+
+      <div class="hf-row">
+        <label for="f-notes">Notes</label>
+        <input type="text" id="f-notes" name="notes"
+               value="{{ profile.notes if profile else '' }}"
+               placeholder="Optional description"
+               class="hf-input">
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-title">Connection</div>
+
+      <div class="hf-row">
+        <label for="f-host">Hostname / IP <span class="req">*</span></label>
+        <input type="text" id="f-host" name="host"
+               value="{{ profile.host if profile else '' }}"
+               placeholder="ipa01.lrn.local  or  192.168.1.10"
+               required class="hf-input">
+      </div>
+
+      <div class="hf-row">
+        <label for="f-port">SSH Port</label>
+        <input type="number" id="f-port" name="port"
+               value="{{ profile.port if profile else 22 }}"
+               min="1" max="65535" class="hf-input hf-input-short">
+      </div>
+
+      <div class="hf-row">
+        <label for="f-user">SSH User</label>
+        <input type="text" id="f-user" name="user"
+               value="{{ profile.user if profile else 'root' }}"
+               placeholder="root" class="hf-input">
+      </div>
+
+      <div class="hf-row">
+        <label for="f-lrn-path">lrn_tools Path</label>
+        <input type="text" id="f-lrn-path" name="lrn_path"
+               value="{{ profile.lrn_path if profile else '~/dev/lrn_tools' }}"
+               placeholder="~/dev/lrn_tools" class="hf-input">
+        <span class="hf-hint">Path to lrn_tools repo on the remote host</span>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-title">Authentication</div>
+
+      <div class="hf-row">
+        <label>Auth Type</label>
+        <div class="hf-radio-group">
+          <label class="hf-radio">
+            <input type="radio" name="auth_type" value="key"
+                   id="auth-key"
+                   {% if not profile or profile.auth_type == 'key' %}checked{% endif %}
+                   onchange="switchAuth('key')">
+            <span>SSH Key <span class="badge badge-ok">Recommended</span></span>
+          </label>
+          <label class="hf-radio">
+            <input type="radio" name="auth_type" value="password"
+                   id="auth-password"
+                   {% if profile and profile.auth_type == 'password' %}checked{% endif %}
+                   onchange="switchAuth('password')">
+            <span>Password <span class="badge badge-warn">Requires sshpass</span></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Key auth fields -->
+      <div id="key-fields">
+        <div class="hf-row">
+          <label for="f-key-path">Private Key Path</label>
+          <input type="text" id="f-key-path" name="key_path"
+                 value="{{ profile.key_path if profile else '' }}"
+                 placeholder="~/.ssh/id_rsa  (blank = SSH default)"
+                 class="hf-input">
+          <span class="hf-hint">Leave blank to use the default SSH key (~/.ssh/id_rsa)</span>
+        </div>
+      </div>
+
+      <!-- Password auth fields -->
+      <div id="password-fields" style="display:none">
+        <div class="hf-row">
+          <label for="f-password">Password</label>
+          <input type="password" id="f-password" name="password"
+                 placeholder="{{ '(unchanged — leave blank to keep current)' if action == 'edit' else 'SSH password' }}"
+                 autocomplete="new-password"
+                 class="hf-input">
+          <span class="hf-hint hf-warn">
+            &#9888; Stored in plain text in ~/.lrn_tools/hosts.json (chmod 600).
+            Use key auth whenever possible.
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="hf-actions">
+      <button type="submit" class="btn btn-primary">
+        {{ '&#9998; Save Changes' if action == 'edit' else '&#43; Add Host' }}
+      </button>
+      <a href="{{ url_for('hosts_page') }}" class="btn btn-ghost">Cancel</a>
+      {% if action == 'edit' %}
+      <button type="button" class="btn btn-ghost"
+              onclick="testCurrentHost('{{ profile.id }}')"
+              id="btn-test-form">
+        &#10003; Test Connection
+      </button>
+      <div id="form-test-result" class="host-test-result" style="display:none;margin-top:8px"></div>
+      {% endif %}
+    </div>
+
+  </form>
+</div>
+
+<script>
+function switchAuth(type) {
+  document.getElementById('key-fields').style.display      = type === 'key'      ? '' : 'none';
+  document.getElementById('password-fields').style.display = type === 'password' ? '' : 'none';
+}
+
+// Initialize visibility on page load
+document.addEventListener('DOMContentLoaded', function () {
+  const checked = document.querySelector('input[name="auth_type"]:checked');
+  if (checked) switchAuth(checked.value);
+});
+
+{% if action == 'edit' %}
+async function testCurrentHost(hostId) {
+  const resultEl = document.getElementById('form-test-result');
+  const btn      = document.getElementById('btn-test-form');
+  resultEl.style.display = 'block';
+  resultEl.className = 'host-test-result testing';
+  resultEl.textContent = 'Testing connection…';
+  btn.disabled = true;
+  try {
+    const resp = await fetch(`/hosts/${hostId}/test`, { method: 'POST' });
+    const data = await resp.json();
+    resultEl.className = 'host-test-result ' + (data.success ? 'success' : 'failure');
+    resultEl.textContent = (data.success ? '✓ ' : '✗ ') + data.message;
+  } catch (e) {
+    resultEl.className = 'host-test-result failure';
+    resultEl.textContent = '✗ Request error: ' + e;
+  } finally {
+    btn.disabled = false;
+  }
+}
+{% endif %}
+</script>
+{% endblock %}

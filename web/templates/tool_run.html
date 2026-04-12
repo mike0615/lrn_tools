@@ -8,13 +8,40 @@
     <p class="tool-desc">{{ tool.description }}</p>
   </div>
 
-  <!-- Args form -->
+  <!-- Run options card -->
   <div class="tool-form-card">
     <div class="form-title">Run Options</div>
+
+    <!-- Host selector -->
+    <div class="form-row">
+      <label for="host-select">Run on</label>
+      <div class="host-select-wrap">
+        <select id="host-select" class="args-input host-select" onchange="onHostChange()">
+          <option value="local">&#127968; Local (this server)</option>
+          {% for h in hosts %}
+          <option value="{{ h.id }}">&#128268; {{ h.name }} ({{ h.user }}@{{ h.host }})</option>
+          {% endfor %}
+        </select>
+        <button type="button" id="btn-test-conn" class="btn btn-ghost btn-sm"
+                onclick="testSelectedHost()" style="display:none" title="Test SSH connection">
+          &#10003; Test
+        </button>
+        {% if not hosts %}
+        <a href="{{ url_for('host_new') }}" class="btn btn-ghost btn-sm">&#43; Add Host</a>
+        {% endif %}
+      </div>
+    </div>
+    <div id="remote-host-note" class="remote-host-note" style="display:none"></div>
+    <div id="host-conn-result" class="host-test-result" style="display:none"></div>
+
+    <!-- Args -->
     <div class="form-row">
       <label for="tool-args">Additional Arguments</label>
-      <input type="text" id="tool-args" placeholder="e.g. --hours 48 --unit named" class="args-input">
+      <input type="text" id="tool-args"
+             placeholder="e.g. --hours 48 --unit named"
+             class="args-input">
     </div>
+
     <div class="form-actions">
       <button id="btn-run" class="btn btn-primary" onclick="runTool()">&#9654; Run</button>
       <button id="btn-stream" class="btn btn-secondary" onclick="streamTool()">&#9654;&#9654; Stream (live)</button>
@@ -31,25 +58,43 @@
   <!-- Output area -->
   <div class="output-section">
     <div class="output-header">
-      <span>Output</span>
+      <span id="output-target-label">Output</span>
       <button class="btn-copy" onclick="copyOutput()">&#128203; Copy</button>
     </div>
-    <!-- Raw terminal output -->
     <pre class="terminal" id="raw-output">Press Run to execute the tool.</pre>
-    <!-- JSON report view (hidden by default) -->
     <div id="json-output" class="json-report" style="display:none"></div>
   </div>
 </div>
 
 <script>
-const TOOL_ID = {{ tool.id | tojson }};
-const TOOL_NAME = {{ tool.name | tojson }};
+const TOOL_ID    = {{ tool.id | tojson }};
+const TOOL_NAME  = {{ tool.name | tojson }};
 const JSON_CAPABLE = {{ tool.json_capable | tojson }};
+
+function getHostId() {
+  return document.getElementById('host-select').value || 'local';
+}
+
+function getHostLabel() {
+  const sel = document.getElementById('host-select');
+  return sel.options[sel.selectedIndex].text;
+}
 
 function setStatus(msg, cls) {
   const el = document.getElementById('run-status');
   el.textContent = msg;
   el.className = 'run-status ' + (cls || '');
+}
+
+function setOutputLabel() {
+  const hid = getHostId();
+  const lbl = document.getElementById('output-target-label');
+  if (hid === 'local') {
+    lbl.textContent = 'Output — Local';
+  } else {
+    const label = getHostLabel().replace(/^[^\s]+ /, '');
+    lbl.textContent = 'Output — ' + label;
+  }
 }
 
 function clearOutput() {
@@ -64,8 +109,49 @@ function copyOutput() {
 
 function toggleView() {
   const json = document.getElementById('json-toggle').checked;
-  document.getElementById('raw-output').style.display = json ? 'none' : 'block';
+  document.getElementById('raw-output').style.display  = json ? 'none'  : 'block';
   document.getElementById('json-output').style.display = json ? 'block' : 'none';
+}
+
+function onHostChange() {
+  const hid      = getHostId();
+  const isRemote = hid !== 'local';
+  const noteEl   = document.getElementById('remote-host-note');
+  const testBtn  = document.getElementById('btn-test-conn');
+  const connRes  = document.getElementById('host-conn-result');
+
+  testBtn.style.display = isRemote ? 'inline-flex' : 'none';
+  connRes.style.display = 'none';
+  connRes.textContent   = '';
+
+  if (isRemote) {
+    const label = getHostLabel().replace(/^[^\s]+ /, '');
+    noteEl.style.display = 'block';
+    noteEl.innerHTML = '&#128268; Running on <strong>' + label + '</strong> &mdash; lrn_tools must be installed at the configured path on that host.';
+  } else {
+    noteEl.style.display = 'none';
+  }
+}
+
+async function testSelectedHost() {
+  const hid   = getHostId();
+  const resEl = document.getElementById('host-conn-result');
+  const btn   = document.getElementById('btn-test-conn');
+  resEl.style.display = 'block';
+  resEl.className = 'host-test-result testing';
+  resEl.textContent = 'Testing connection\u2026';
+  btn.disabled = true;
+  try {
+    const resp = await fetch('/hosts/' + hid + '/test', { method: 'POST' });
+    const data = await resp.json();
+    resEl.className = 'host-test-result ' + (data.success ? 'success' : 'failure');
+    resEl.textContent = (data.success ? '\u2713 ' : '\u2717 ') + data.message;
+  } catch (e) {
+    resEl.className = 'host-test-result failure';
+    resEl.textContent = '\u2717 Request error: ' + e;
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 function renderJsonReport(data) {
@@ -75,31 +161,29 @@ function renderJsonReport(data) {
     return;
   }
   const jd = data.json_data;
-  let html = `<div class="jd-header">
-    <span class="jd-tool">${jd.tool || ''}</span>
-    <span class="badge badge-${jd.status || 'ok'}">${(jd.status || 'ok').toUpperCase()}</span>
-    <span class="jd-ts">${jd.timestamp || ''}</span>
-  </div>`;
-  if (jd.summary) html += `<p class="jd-summary">${jd.summary}</p>`;
+  let html = '<div class="jd-header"><span class="jd-tool">' + (jd.tool || '') + '</span>'
+    + '<span class="badge badge-' + (jd.status || 'ok') + '">' + (jd.status || 'ok').toUpperCase() + '</span>'
+    + '<span class="jd-ts">' + (jd.timestamp || '') + '</span></div>';
+  if (jd.summary) html += '<p class="jd-summary">' + jd.summary + '</p>';
   if (jd.errors && jd.errors.length) {
     html += '<div class="jd-errors"><strong>Errors:</strong><ul>';
-    jd.errors.forEach(e => { html += `<li>${e}</li>`; });
+    jd.errors.forEach(function(e) { html += '<li>' + e + '</li>'; });
     html += '</ul></div>';
   }
   if (jd.records && jd.records.length) {
     const cols = Object.keys(jd.records[0]);
     html += '<div class="table-wrap"><table class="report-table"><thead><tr>';
-    cols.forEach(c => { html += `<th>${c}</th>`; });
+    cols.forEach(function(c) { html += '<th>' + c + '</th>'; });
     html += '</tr></thead><tbody>';
-    jd.records.forEach(row => {
+    jd.records.forEach(function(row) {
       const status = (row.Status || row.status || '').toLowerCase();
-      html += `<tr class="row-${status}">`;
-      cols.forEach(c => {
+      html += '<tr class="row-' + status + '">';
+      cols.forEach(function(c) {
         let val = row[c] !== undefined ? row[c] : '';
         if (c === 'Status' || c === 'status') {
-          html += `<td><span class="badge badge-${status}">${val}</span></td>`;
+          html += '<td><span class="badge badge-' + status + '">' + val + '</span></td>';
         } else {
-          html += `<td>${val}</td>`;
+          html += '<td>' + val + '</td>';
         }
       });
       html += '</tr>';
@@ -110,53 +194,59 @@ function renderJsonReport(data) {
 }
 
 function runTool() {
-  const args = document.getElementById('tool-args').value;
+  const args   = document.getElementById('tool-args').value;
+  const hostId = getHostId();
   const rawOut = document.getElementById('raw-output');
-  rawOut.textContent = 'Running…';
-  setStatus('Running…', 'status-running');
+  rawOut.textContent = 'Running\u2026';
+  setStatus('Running\u2026', 'status-running');
+  setOutputLabel();
   document.getElementById('btn-run').disabled = true;
 
   const form = new FormData();
-  form.append('args', args);
+  form.append('args',    args);
+  form.append('host_id', hostId);
 
-  fetch(`/run/${TOOL_ID}`, { method: 'POST', body: form })
-    .then(r => r.json())
-    .then(data => {
-      rawOut.textContent = (data.stdout || '') + (data.stderr ? '\n--- STDERR ---\n' + data.stderr : '');
-      const ms = data.duration_ms ? ` (${data.duration_ms}ms)` : '';
-      const ok = data.exit_code === 0;
-      setStatus(`Exited: ${data.exit_code}${ms}`, ok ? 'status-ok' : 'status-error');
+  fetch('/run/' + TOOL_ID, { method: 'POST', body: form })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      rawOut.textContent = (data.stdout || '')
+        + (data.stderr ? '\n--- STDERR ---\n' + data.stderr : '')
+        + (data.error  ? '\n--- ERROR ---\n'  + data.error  : '');
+      const ms  = data.duration_ms ? ' (' + data.duration_ms + 'ms)' : '';
+      const ok  = data.exit_code === 0;
+      const tgt = data.target && data.target !== 'local' ? ' on ' + data.target : '';
+      setStatus('Exited: ' + data.exit_code + ms + tgt, ok ? 'status-ok' : 'status-error');
       if (JSON_CAPABLE && data.json_data) renderJsonReport(data);
-      if (document.getElementById('json-toggle').checked && data.json_data) {
-        renderJsonReport(data);
-      }
+      if (document.getElementById('json-toggle').checked && data.json_data) renderJsonReport(data);
       if (window.LrnMan) window.LrnMan.commentOnResult(data.exit_code || 0);
     })
-    .catch(err => {
-      rawOut.textContent = `Request error: ${err}`;
+    .catch(function(err) {
+      rawOut.textContent = 'Request error: ' + err;
       setStatus('Error', 'status-error');
       if (window.LrnMan) window.LrnMan.commentOnResult(1);
     })
-    .finally(() => {
+    .finally(function() {
       document.getElementById('btn-run').disabled = false;
     });
 }
 
 function streamTool() {
-  const args = document.getElementById('tool-args').value;
+  const args   = document.getElementById('tool-args').value;
+  const hostId = getHostId();
   const rawOut = document.getElementById('raw-output');
   rawOut.textContent = '';
-  setStatus('Streaming…', 'status-running');
+  setStatus('Streaming\u2026', 'status-running');
+  setOutputLabel();
   document.getElementById('btn-stream').disabled = true;
 
-  const url = `/stream/${TOOL_ID}?args=${encodeURIComponent(args)}`;
-  const es = new EventSource(url);
+  const url = '/stream/' + TOOL_ID + '?args=' + encodeURIComponent(args) + '&host_id=' + encodeURIComponent(hostId);
+  const es  = new EventSource(url);
 
-  es.onmessage = (e) => {
+  es.onmessage = function(e) {
     const line = JSON.parse(e.data);
     if (line.startsWith('__EXIT__')) {
       const code = line.replace('__EXIT__', '');
-      setStatus(`Exited: ${code}`, code === '0' ? 'status-ok' : 'status-error');
+      setStatus('Exited: ' + code, code === '0' ? 'status-ok' : 'status-error');
       es.close();
       document.getElementById('btn-stream').disabled = false;
       if (window.LrnMan) window.LrnMan.commentOnResult(parseInt(code, 10));
@@ -165,7 +255,8 @@ function streamTool() {
       rawOut.scrollTop = rawOut.scrollHeight;
     }
   };
-  es.onerror = () => {
+
+  es.onerror = function() {
     setStatus('Stream ended', 'status-warn');
     es.close();
     document.getElementById('btn-stream').disabled = false;
