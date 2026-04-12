@@ -148,6 +148,64 @@ TOOLS = [
         "description": "Run automated diagnostic checks: DNS, time sync, connectivity, Kerberos",
         "args_help": [],
     },
+    {
+        "id": "sys-status-report",
+        "name": "Status Report",
+        "category": "System",
+        "path": _t("tools/system/status-report.py"),
+        "json_capable": True,
+        "description": "Full system health sweep: identity, memory, disk, services, network, errors, logins",
+        "args_help": [
+            {"flag": "--error-hours", "help": "Hours to look back for journal errors (default: 24)", "type": "int"},
+        ],
+    },
+    {
+        "id": "sys-software-inventory",
+        "name": "Software Inventory",
+        "category": "System",
+        "path": _t("tools/system/software-inventory.py"),
+        "json_capable": True,
+        "description": "List installed RPM packages with version, install date, repo, and size",
+        "args_help": [
+            {"flag": "--recent", "help": "Only packages installed in last N days", "type": "int"},
+            {"flag": "--search", "help": "Filter by package name (case-insensitive)"},
+            {"flag": "--vendor", "help": "Filter by vendor string"},
+            {"flag": "--repo",   "help": "Filter by repository ID"},
+            {"flag": "--sort",   "help": "Sort by: name, date, size (default: date)"},
+            {"flag": "--top",    "help": "Show top N packages after filtering", "type": "int"},
+        ],
+    },
+    {
+        "id": "sys-ssh-keygen",
+        "name": "SSH Key Generator",
+        "category": "System",
+        "path": _t("tools/system/ssh-keygen-tool.py"),
+        "json_capable": True,
+        "description": "Generate SSH key pairs (ed25519, RSA, ECDSA) and display public key and fingerprint",
+        "args_help": [
+            {"flag": "--type",   "help": "Key type: ed25519, rsa, ecdsa (default: ed25519)"},
+            {"flag": "--bits",   "help": "Key bits — RSA: 4096; ECDSA: 521", "type": "int"},
+            {"flag": "--name",   "help": "Key filename (default: id_<type>)"},
+            {"flag": "--dir",    "help": "Output directory (default: ~/.ssh)"},
+            {"flag": "--comment","help": "Key comment (default: user@host)"},
+            {"flag": "--passphrase", "help": "Key passphrase (default: none)"},
+            {"flag": "--force",  "action": "store_true", "help": "Overwrite existing key"},
+            {"flag": "--list",   "action": "store_true", "help": "List existing keys"},
+        ],
+    },
+    {
+        "id": "sys-password-hash",
+        "name": "Password Hasher",
+        "category": "System",
+        "path": _t("tools/system/password-hash.py"),
+        "json_capable": True,
+        "description": "Hash passwords for /etc/shadow, htpasswd, and other formats using OpenSSL",
+        "args_help": [
+            {"flag": "--password", "help": "Password to hash (omit to prompt interactively)"},
+            {"flag": "--stdin",    "action": "store_true", "help": "Read password from stdin"},
+            {"flag": "--format",   "help": "Format: sha512crypt, sha256crypt, md5crypt, htpasswd-apr1, sha256, sha512, all (default: all)"},
+        ],
+    },
     # ── KVM ───────────────────────────────────────────────────────────────────
     {
         "id": "kvm-vm-list",
@@ -217,6 +275,19 @@ TOOLS = [
     },
     # ── Network ───────────────────────────────────────────────────────────────
     {
+        "id": "net-subnet-calc",
+        "name": "Subnet Calculator",
+        "category": "Network",
+        "path": _t("tools/network/subnet-calc.py"),
+        "json_capable": True,
+        "description": "Calculate subnet details for a CIDR block and optionally split into subnets",
+        "args_help": [
+            {"flag": "network", "positional": True, "help": "CIDR notation, e.g. 192.168.1.0/24"},
+            {"flag": "--split", "help": "Split into subnets of this prefix length (e.g. --split 26)", "type": "int"},
+            {"flag": "--list-subnets", "help": "List all subnets of given prefix (capped at 512)", "type": "int"},
+        ],
+    },
+    {
         "id": "net-connectivity",
         "name": "Connectivity Check",
         "category": "Network",
@@ -239,6 +310,21 @@ TOOLS = [
         ],
     },
     # ── Logs ──────────────────────────────────────────────────────────────────
+    {
+        "id": "log-audit",
+        "name": "Audit Log",
+        "category": "Logs",
+        "path": _t("tools/logs/audit-log.py"),
+        "json_capable": True,
+        "description": "Collect and view Linux audit log events (USER_AUTH, sudo, SELinux, etc.)",
+        "args_help": [
+            {"flag": "--hours", "help": "Look back N hours (default: 24)", "default": "24", "type": "int"},
+            {"flag": "--type",  "help": "Event type filter: USER_AUTH, USER_CMD, AVC, etc. (default: all)"},
+            {"flag": "--user",  "help": "Filter by username or UID"},
+            {"flag": "--summary", "action": "store_true", "help": "Show summary report via aureport"},
+            {"flag": "--top",   "help": "Max events to display (default: 200)", "type": "int"},
+        ],
+    },
     {
         "id": "log-errors",
         "name": "Journal Errors",

@@ -50,6 +50,11 @@
                     title="Test SSH connection">
               &#10003; Test
             </button>
+            <button class="btn btn-ghost btn-sm"
+                    onclick="deployHost('{{ p.id }}', '{{ p.name }}', this)"
+                    title="Deploy lrn_tools to this host via rsync">
+              &#128228; Deploy
+            </button>
             <a href="{{ url_for('host_edit', host_id=p.id) }}"
                class="btn btn-ghost btn-sm">&#9998; Edit</a>
             <form method="post" action="{{ url_for('host_delete', host_id=p.id) }}"
@@ -62,6 +67,17 @@
         <tr class="host-test-row" id="test-row-{{ p.id }}" style="display:none">
           <td colspan="8">
             <div class="host-test-result" id="test-result-{{ p.id }}"></div>
+          </td>
+        </tr>
+        <tr class="host-deploy-row" id="deploy-row-{{ p.id }}" style="display:none">
+          <td colspan="8">
+            <div class="deploy-panel">
+              <div class="deploy-panel-header">
+                <span>&#128228; Deploying to <strong>{{ p.name }}</strong></span>
+                <button class="btn-copy btn-sm" onclick="closeDeploy('{{ p.id }}')">&#10005; Close</button>
+              </div>
+              <pre class="terminal deploy-terminal" id="deploy-output-{{ p.id }}"></pre>
+            </div>
           </td>
         </tr>
         {% endfor %}
@@ -104,24 +120,59 @@ ssh-copy-id -i ~/.ssh/lrn_tools_key.pub user@remote-host</pre>
 
 <script>
 async function testHost(hostId, btn) {
-  const resultEl  = document.getElementById(`test-result-${hostId}`);
-  const resultRow = document.getElementById(`test-row-${hostId}`);
+  const resultEl  = document.getElementById('test-result-' + hostId);
+  const resultRow = document.getElementById('test-row-'   + hostId);
   resultRow.style.display = 'table-row';
   resultEl.className = 'host-test-result testing';
-  resultEl.textContent = 'Testing connection…';
+  resultEl.textContent = 'Testing connection\u2026';
   btn.disabled = true;
-
   try {
-    const resp = await fetch(`/hosts/${hostId}/test`, { method: 'POST' });
+    const resp = await fetch('/hosts/' + hostId + '/test', { method: 'POST' });
     const data = await resp.json();
     resultEl.className = 'host-test-result ' + (data.success ? 'success' : 'failure');
-    resultEl.textContent = (data.success ? '✓ ' : '✗ ') + data.message;
+    resultEl.textContent = (data.success ? '\u2713 ' : '\u2717 ') + data.message;
   } catch (e) {
     resultEl.className = 'host-test-result failure';
-    resultEl.textContent = '✗ Request error: ' + e;
+    resultEl.textContent = '\u2717 Request error: ' + e;
   } finally {
     btn.disabled = false;
   }
+}
+
+function closeDeploy(hostId) {
+  document.getElementById('deploy-row-' + hostId).style.display = 'none';
+}
+
+function deployHost(hostId, hostName, btn) {
+  if (!confirm('Deploy lrn_tools to ' + hostName + ' via rsync?\n\nThis will overwrite the remote lrn_tools directory.')) return;
+
+  const deployRow = document.getElementById('deploy-row-' + hostId);
+  const output    = document.getElementById('deploy-output-' + hostId);
+  deployRow.style.display = 'table-row';
+  output.textContent = '';
+  btn.disabled = true;
+
+  const es = new EventSource('/hosts/' + hostId + '/deploy');
+
+  es.onmessage = function(e) {
+    const line = JSON.parse(e.data);
+    if (line.startsWith('__EXIT__')) {
+      const code = line.replace('__EXIT__', '');
+      output.textContent += '\n[Exit code: ' + code + ']\n';
+      output.scrollTop = output.scrollHeight;
+      es.close();
+      btn.disabled = false;
+    } else {
+      output.textContent += line;
+      output.scrollTop = output.scrollHeight;
+    }
+  };
+
+  es.onerror = function() {
+    output.textContent += '\n[Stream closed]\n';
+    es.close();
+    btn.disabled = false;
+  };
 }
 </script>
 {% endblock %}

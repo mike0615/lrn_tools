@@ -261,6 +261,100 @@ def stream_remote(profile: HostProfile, rel_path: str, extra_args: list):
 
 
 # ---------------------------------------------------------------------------
+# Deploy lrn_tools to a remote host
+# ---------------------------------------------------------------------------
+
+def deploy_lrn_tools(profile: HostProfile, local_path: str):
+    """
+    Deploy lrn_tools to a remote host using rsync over SSH.
+    Yields progress lines; final yield is '__EXIT__<code>'.
+
+    local_path : absolute path to lrn_tools on this server (e.g. /opt/lrn_tools)
+    The remote destination is profile.lrn_path.
+    """
+    if not shutil.which('rsync'):
+        yield 'ERROR: rsync is not installed on this server.\n'
+        yield 'Install with: dnf install rsync\n'
+        yield '__EXIT__1'
+        return
+
+    remote_dest = f'{profile.user}@{profile.host}:{profile.lrn_path}'
+
+    # Build ssh options string for rsync -e
+    ssh_opts = (
+        f'ssh -p {profile.port}'
+        f' -o StrictHostKeyChecking=no'
+        f' -o ConnectTimeout=10'
+    )
+    if profile.auth_type == 'key' and profile.key_path:
+        ssh_opts += f' -i {os.path.expanduser(profile.key_path)}'
+    elif profile.auth_type == 'key':
+        ssh_opts += ' -o BatchMode=yes'
+
+    rsync_cmd = [
+        'rsync', '-avz', '--delete', '--progress',
+        '--exclude=.git',
+        '--exclude=__pycache__',
+        '--exclude=*.pyc',
+        '--exclude=*.log',
+        '--exclude=hosts.json',
+        '-e', ssh_opts,
+        f'{local_path.rstrip("/")}/',
+        f'{remote_dest}/',
+    ]
+
+    # Wrap with sshpass for password auth
+    if profile.auth_type == 'password':
+        if not shutil.which('sshpass'):
+            yield 'ERROR: sshpass not installed (dnf install sshpass)\n'
+            yield '__EXIT__1'
+            return
+        rsync_cmd = ['sshpass', '-p', profile.password] + rsync_cmd
+
+    # Ensure remote directory exists first
+    mkdir_cmd, err = _build_cmd(profile, f'mkdir -p {profile.lrn_path}')
+    if err:
+        yield f'ERROR: {err}\n'
+        yield '__EXIT__1'
+        return
+
+    yield f'=== Deploying lrn_tools to {profile.name} ===\n'
+    yield f'  Source : {local_path}\n'
+    yield f'  Target : {profile.user}@{profile.host}:{profile.lrn_path}\n'
+    yield f'  Auth   : {profile.auth_type}\n'
+    yield '---\n'
+    yield 'Creating remote directory...\n'
+
+    subprocess.run(mkdir_cmd, capture_output=True, timeout=15)
+
+    yield 'Starting rsync transfer...\n\n'
+
+    try:
+        proc = subprocess.Popen(
+            rsync_cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            errors='replace',
+        )
+        for line in iter(proc.stdout.readline, ''):
+            yield line
+        proc.wait()
+        if proc.returncode == 0:
+            yield '\n=== Transfer complete ===\n'
+            yield f'\nNext step — run on {profile.host}:\n'
+            yield f'  bash {profile.lrn_path}/install.sh\n'
+            yield '\nOr to start the web dashboard immediately:\n'
+            yield f'  python3 {profile.lrn_path}/web/app.py --host 0.0.0.0 --port 5000\n'
+        else:
+            yield f'\nrsync exited with code {proc.returncode}\n'
+        yield f'__EXIT__{proc.returncode}'
+    except Exception as e:
+        yield f'ERROR: {e}\n'
+        yield '__EXIT__1'
+
+
+# ---------------------------------------------------------------------------
 # Connection test
 # ---------------------------------------------------------------------------
 
