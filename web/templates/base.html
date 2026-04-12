@@ -1,12 +1,14 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}{{ site_name }} Admin{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
-<body>
+<body data-tool-id="{{ request.view_args.get('tool_id', '') if request.view_args else '' }}"
+      data-page="{{ request.endpoint or '' }}">
+
   <div class="layout">
 
     <!-- Sidebar -->
@@ -39,6 +41,16 @@
       <div class="topbar">
         <span class="topbar-title">{% block page_title %}Dashboard{% endblock %}</span>
         <span class="topbar-status" id="topbar-status"></span>
+        <div class="topbar-controls">
+          <button id="theme-toggle" class="topbar-btn" title="Toggle light/dark mode" aria-label="Toggle theme">
+            <span id="theme-icon">&#9728;</span>
+            <span id="theme-label">Light</span>
+          </button>
+          <button id="mascot-toggle" class="topbar-btn" title="Toggle LRN Man on/off" aria-label="Toggle LRN Man">
+            <span>&#128737;</span>
+            <span id="mascot-label">Guide: ON</span>
+          </button>
+        </div>
       </div>
       <div class="content">
         {% block content %}{% endblock %}
@@ -46,6 +58,23 @@
     </main>
 
   </div>
+
+  <!-- LRN Man Mascot -->
+  <div id="lrn-man-container" class="lrn-man-container">
+    <div id="lrn-bubble" class="lrn-bubble" aria-live="polite">
+      <button class="lrn-dismiss" id="lrn-dismiss" title="Dismiss" aria-label="Dismiss tip">&#215;</button>
+      <p id="lrn-tip-text" class="lrn-tip-text"></p>
+      <div class="lrn-bubble-footer">
+        <button class="lrn-next-btn" id="lrn-next">Next tip &#8594;</button>
+      </div>
+    </div>
+    <img id="lrn-man-img"
+         src="{{ url_for('static', filename='img/lrn-man.png') }}"
+         class="lrn-man-img"
+         alt="LRN Man"
+         title="Click me for tips!">
+  </div>
+
   <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
   {% block extra_js %}{% endblock %}
 </body>

@@ -1,6 +1,8 @@
 /* LRN Tools Web Dashboard — self-contained CSS, zero CDN */
 
-:root {
+/* ── Dark mode (default) ─────────────────────────────────────────── */
+:root,
+[data-theme="dark"] {
   --bg:        #0d1117;
   --bg2:       #161b22;
   --bg3:       #21262d;
@@ -13,6 +15,9 @@
   --warn:      #d29922;
   --error:     #f85149;
   --info:      #58a6ff;
+  --bubble-bg: #1c2333;
+  --bubble-border: #388bfd;
+  --shadow:    rgba(0,0,0,0.5);
   --sidebar-w: 220px;
   --topbar-h:  48px;
   --font-mono: 'Courier New', Courier, monospace;
@@ -20,7 +25,28 @@
   --radius:    6px;
 }
 
+/* ── Light mode ──────────────────────────────────────────────────── */
+[data-theme="light"] {
+  --bg:        #f6f8fa;
+  --bg2:       #ffffff;
+  --bg3:       #eaeef2;
+  --border:    #d0d7de;
+  --text:      #1f2328;
+  --text-dim:  #656d76;
+  --accent:    #0969da;
+  --accent-h:  #218bff;
+  --ok:        #1a7f37;
+  --warn:      #9a6700;
+  --error:     #cf222e;
+  --info:      #0550ae;
+  --bubble-bg: #ffffff;
+  --bubble-border: #0969da;
+  --shadow:    rgba(0,0,0,0.15);
+}
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { height: 100%; }
 
 body {
   font-family: var(--font-ui);
@@ -28,6 +54,7 @@ body {
   color: var(--text);
   height: 100vh;
   overflow: hidden;
+  transition: background 0.2s, color 0.2s;
 }
 
 /* ── Layout ──────────────────────────────────────────────────────── */
@@ -45,6 +72,7 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  transition: background 0.2s, border-color 0.2s;
 }
 
 .sidebar-header {
@@ -140,19 +168,55 @@ body {
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
-  padding: 0 24px;
-  gap: 16px;
+  padding: 0 16px 0 24px;
+  gap: 12px;
+  transition: background 0.2s, border-color 0.2s;
 }
 
 .topbar-title {
   font-size: 14px;
   font-weight: 600;
   color: var(--text);
+  flex: 1;
 }
 
 .topbar-status {
   font-size: 12px;
   color: var(--text-dim);
+}
+
+.topbar-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.topbar-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 12px;
+  font-family: var(--font-ui);
+  padding: 5px 10px;
+  transition: all 0.15s;
+  white-space: nowrap;
+  user-select: none;
+}
+.topbar-btn:hover {
+  color: var(--text);
+  border-color: var(--accent);
+  background: rgba(31,111,235,0.08);
+}
+.topbar-btn.active {
+  color: var(--accent-h);
+  border-color: var(--accent);
+  background: rgba(31,111,235,0.12);
 }
 
 .content {
@@ -179,6 +243,7 @@ body {
   border-radius: var(--radius);
   margin-bottom: 16px;
   overflow: hidden;
+  transition: background 0.2s, border-color 0.2s;
 }
 
 .category-header {
@@ -282,7 +347,7 @@ body {
   font-size: 13px;
   padding: 7px 10px;
   outline: none;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, background 0.2s, color 0.2s;
 }
 .args-input:focus { border-color: var(--accent); }
 
@@ -298,6 +363,7 @@ body {
   border-radius: var(--radius);
   cursor: pointer;
   font-size: 13px;
+  font-family: var(--font-ui);
   padding: 8px 16px;
   transition: all 0.15s;
 }
@@ -357,6 +423,7 @@ body {
   color: var(--text-dim);
   cursor: pointer;
   font-size: 11px;
+  font-family: var(--font-ui);
   padding: 3px 8px;
 }
 .btn-copy:hover { color: var(--text); border-color: var(--text-dim); }
@@ -373,6 +440,7 @@ body {
   max-height: calc(100vh - 420px);
   white-space: pre-wrap;
   word-break: break-all;
+  transition: background 0.2s, color 0.2s;
 }
 
 /* ── JSON Report ─────────────────────────────────────────────────── */
@@ -468,8 +536,137 @@ body {
   border: 1px solid rgba(88,166,255,0.3);
 }
 
+/* ── LRN Man Mascot ──────────────────────────────────────────────── */
+
+.lrn-man-container {
+  position: fixed;
+  bottom: 16px;
+  right: 20px;
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0;
+  pointer-events: none; /* children re-enable */
+}
+
+.lrn-man-container.hidden {
+  display: none;
+}
+
+.lrn-man-img {
+  width: 130px;
+  cursor: pointer;
+  pointer-events: all;
+  filter: drop-shadow(0 6px 16px var(--shadow));
+  transition: transform 0.2s ease, filter 0.2s ease;
+  display: block;
+}
+.lrn-man-img:hover {
+  transform: scale(1.04) translateY(-3px);
+  filter: drop-shadow(0 10px 24px var(--shadow));
+}
+
+/* Subtle entrance animation */
+@keyframes lrnManEntry {
+  from { transform: translateY(20px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+.lrn-man-img {
+  animation: lrnManEntry 0.4s ease forwards;
+}
+
+.lrn-bubble {
+  background: var(--bubble-bg);
+  border: 1.5px solid var(--bubble-border);
+  border-radius: 12px;
+  padding: 14px 16px 10px;
+  max-width: 300px;
+  min-width: 220px;
+  position: relative;
+  box-shadow: 0 6px 24px var(--shadow);
+  pointer-events: all;
+  margin-bottom: 8px;
+  animation: bubbleIn 0.25s ease forwards;
+}
+
+@keyframes bubbleIn {
+  from { transform: scale(0.9) translateY(8px); opacity: 0; }
+  to   { transform: scale(1)   translateY(0);   opacity: 1; }
+}
+
+/* Tail pointing down-right toward LRN Man */
+.lrn-bubble::before {
+  content: '';
+  position: absolute;
+  bottom: -13px;
+  right: 44px;
+  border-left: 12px solid transparent;
+  border-right: 12px solid transparent;
+  border-top: 13px solid var(--bubble-border);
+}
+.lrn-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -11px;
+  right: 45px;
+  border-left: 11px solid transparent;
+  border-right: 11px solid transparent;
+  border-top: 11px solid var(--bubble-bg);
+}
+
+.lrn-bubble.lrn-hidden {
+  display: none;
+}
+
+.lrn-dismiss {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: color 0.15s;
+}
+.lrn-dismiss:hover { color: var(--text); }
+
+.lrn-tip-text {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.5;
+  padding-right: 20px;
+  margin-bottom: 10px;
+}
+
+.lrn-bubble-footer {
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+
+.lrn-next-btn {
+  background: transparent;
+  border: none;
+  color: var(--accent-h);
+  font-size: 11px;
+  font-family: var(--font-ui);
+  cursor: pointer;
+  padding: 0;
+  transition: opacity 0.15s;
+}
+.lrn-next-btn:hover { opacity: 0.75; }
+
 /* ── Responsive ──────────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .sidebar { width: 180px; min-width: 180px; }
   .content { padding: 16px; }
+  .lrn-man-img { width: 100px; }
+  .lrn-bubble { max-width: 240px; min-width: 180px; }
+  .topbar-btn span:last-child { display: none; } /* hide text labels on small screens */
 }

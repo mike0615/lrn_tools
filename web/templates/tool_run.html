@@ -130,10 +130,12 @@ function runTool() {
       if (document.getElementById('json-toggle').checked && data.json_data) {
         renderJsonReport(data);
       }
+      if (window.LrnMan) window.LrnMan.commentOnResult(data.exit_code || 0);
     })
     .catch(err => {
       rawOut.textContent = `Request error: ${err}`;
       setStatus('Error', 'status-error');
+      if (window.LrnMan) window.LrnMan.commentOnResult(1);
     })
     .finally(() => {
       document.getElementById('btn-run').disabled = false;
@@ -157,6 +159,7 @@ function streamTool() {
       setStatus(`Exited: ${code}`, code === '0' ? 'status-ok' : 'status-error');
       es.close();
       document.getElementById('btn-stream').disabled = false;
+      if (window.LrnMan) window.LrnMan.commentOnResult(parseInt(code, 10));
     } else {
       rawOut.textContent += line;
       rawOut.scrollTop = rawOut.scrollHeight;
