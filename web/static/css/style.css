@@ -662,6 +662,313 @@ body {
 }
 .lrn-next-btn:hover { opacity: 0.75; }
 
+/* ── Host selector (tool run page) ──────────────────────────────── */
+
+.host-select-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.host-select {
+  flex: 1;
+}
+
+.btn-sm {
+  font-size: 12px;
+  padding: 5px 10px;
+  white-space: nowrap;
+}
+
+.remote-host-note {
+  font-size: 12px;
+  color: var(--info);
+  background: rgba(88,166,255,0.08);
+  border: 1px solid rgba(88,166,255,0.2);
+  border-radius: var(--radius);
+  padding: 7px 12px;
+  margin-bottom: 8px;
+}
+
+.host-test-result {
+  font-size: 12px;
+  padding: 7px 12px;
+  border-radius: var(--radius);
+  margin-top: 4px;
+  display: none;
+}
+.host-test-result.testing {
+  display: block;
+  color: var(--text-dim);
+  background: var(--bg3);
+  border: 1px solid var(--border);
+}
+.host-test-result.success {
+  display: block;
+  color: var(--ok);
+  background: rgba(63,185,80,0.08);
+  border: 1px solid rgba(63,185,80,0.3);
+}
+.host-test-result.failure {
+  display: block;
+  color: var(--error);
+  background: rgba(248,81,73,0.08);
+  border: 1px solid rgba(248,81,73,0.3);
+}
+
+/* ── Nav badge (host count) ──────────────────────────────────────── */
+
+.nav-badge {
+  display: inline-block;
+  background: var(--accent);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  border-radius: 8px;
+  padding: 1px 5px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+/* ── Hosts management page ───────────────────────────────────────── */
+
+.hosts-page { display: flex; flex-direction: column; gap: 20px; }
+
+.hosts-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.hosts-intro {
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.5;
+  flex: 1;
+}
+
+.hosts-intro code {
+  font-family: var(--font-mono);
+  background: var(--bg3);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 12px;
+}
+
+.hosts-table-wrap {
+  overflow-x: auto;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.hosts-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.hosts-table th {
+  background: var(--bg3);
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.hosts-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  vertical-align: middle;
+}
+.hosts-table tr:last-child td { border-bottom: none; }
+.hosts-table tr:hover td { background: var(--bg3); }
+
+.host-name   { font-weight: 600; }
+.host-addr   { font-family: var(--font-mono); font-size: 12px; }
+.host-lrn-path { font-family: var(--font-mono); font-size: 11px; color: var(--text-dim); }
+.host-notes  { font-size: 12px; color: var(--text-dim); max-width: 200px; }
+
+.host-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.host-test-row td { padding: 0 14px 10px; }
+
+.btn-danger {
+  background: transparent;
+  border: 1px solid rgba(248,81,73,0.4);
+  color: var(--error);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 12px;
+  font-family: var(--font-ui);
+  padding: 5px 10px;
+  transition: all 0.15s;
+}
+.btn-danger:hover { background: rgba(248,81,73,0.1); border-color: var(--error); }
+
+.hosts-empty {
+  background: var(--bg2);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 14px;
+}
+
+/* ── Hosts help section ──────────────────────────────────────────── */
+
+.hosts-help {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.help-section {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+.help-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.help-section p {
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+.help-code {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 8px 10px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+/* ── Host add/edit form ──────────────────────────────────────────── */
+
+.host-form-page { max-width: 680px; display: flex; flex-direction: column; gap: 16px; }
+
+.form-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.form-card-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-dim);
+  padding: 10px 16px;
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+}
+
+.hf-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.hf-row:last-child { border-bottom: none; }
+
+.hf-row label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.hf-input {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  padding: 8px 10px;
+  outline: none;
+  transition: border-color 0.15s;
+  width: 100%;
+}
+.hf-input:focus { border-color: var(--accent); }
+
+.hf-input-short { max-width: 120px; }
+
+.hf-hint {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+.hf-warn {
+  color: var(--warn);
+}
+
+.hf-radio-group {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.hf-radio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.hf-radio input[type="radio"] { cursor: pointer; }
+
+.req { color: var(--error); margin-left: 2px; }
+
+.hf-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.form-error-banner {
+  background: rgba(248,81,73,0.1);
+  border: 1px solid var(--error);
+  border-radius: var(--radius);
+  color: var(--error);
+  font-size: 13px;
+  padding: 10px 14px;
+}
+
 /* ── Responsive ──────────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .sidebar { width: 180px; min-width: 180px; }

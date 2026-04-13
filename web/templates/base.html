@@ -22,6 +22,9 @@
         <a href="{{ url_for('index') }}" class="nav-home {% if request.endpoint == 'index' %}active{% endif %}">
           &#8962; Dashboard
         </a>
+        <a href="{{ url_for('hosts_page') }}" class="nav-home {% if request.endpoint in ['hosts_page','host_new','host_edit'] %}active{% endif %}">
+          &#128268; Remote Hosts{% if hosts %} <span class="nav-badge">{{ hosts|length }}</span>{% endif %}
+        </a>
         {% for cat in categories %}
         <div class="nav-category">
           <span class="cat-label">{{ cat }}</span>

@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}Remote Hosts — {{ site_name }}{% endblock %}
+{% block page_title %}Remote Hosts{% endblock %}
+
+{% block content %}
+<div class="hosts-page">
+
+  <div class="hosts-toolbar">
+    <p class="hosts-intro">
+      Saved SSH host profiles. Tools can be run on any host from the tool's run page.
+      Key-based auth is recommended — password auth requires <code>sshpass</code> on this server.
+    </p>
+    <a href="{{ url_for('host_new') }}" class="btn btn-primary">&#43; Add Host</a>
+  </div>
+
+  {% if profiles %}
+  <div class="hosts-table-wrap">
+    <table class="hosts-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Host / IP</th>
+          <th>Port</th>
+          <th>User</th>
+          <th>Auth</th>
+          <th>LRN Path</th>
+          <th>Notes</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in profiles %}
+        <tr id="host-row-{{ p.id }}">
+          <td><span class="host-name">{{ p.name }}</span></td>
+          <td><code class="host-addr">{{ p.host }}</code></td>
+          <td>{{ p.port }}</td>
+          <td><code>{{ p.user }}</code></td>
+          <td>
+            {% if p.auth_type == 'key' %}
+            <span class="badge badge-ok">Key</span>
+            {% else %}
+            <span class="badge badge-warn">Password</span>
+            {% endif %}
+          </td>
+          <td><code class="host-lrn-path">{{ p.lrn_path }}</code></td>
+          <td class="host-notes">{{ p.notes or '—' }}</td>
+          <td class="host-actions">
+            <button class="btn btn-ghost btn-sm"
+                    onclick="testHost('{{ p.id }}', this)"
+                    title="Test SSH connection">
+              &#10003; Test
+            </button>
+            <a href="{{ url_for('host_edit', host_id=p.id) }}"
+               class="btn btn-ghost btn-sm">&#9998; Edit</a>
+            <form method="post" action="{{ url_for('host_delete', host_id=p.id) }}"
+                  style="display:inline"
+                  onsubmit="return confirm('Delete host \'{{ p.name }}\'?')">
+              <button type="submit" class="btn btn-danger btn-sm">&#128465; Delete</button>
+            </form>
+          </td>
+        </tr>
+        <tr class="host-test-row" id="test-row-{{ p.id }}" style="display:none">
+          <td colspan="8">
+            <div class="host-test-result" id="test-result-{{ p.id }}"></div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% else %}
+  <div class="hosts-empty">
+    <p>No remote hosts configured yet.</p>
+    <a href="{{ url_for('host_new') }}" class="btn btn-primary" style="margin-top:12px">
+      &#43; Add your first host
+    </a>
+  </div>
+  {% endif %}
+
+  <div class="hosts-help">
+    <div class="help-section">
+      <div class="help-title">Key-based Authentication (Recommended)</div>
+      <p>Generate a key pair on this server and copy the public key to each remote host:</p>
+      <pre class="help-code">ssh-keygen -t ed25519 -f ~/.ssh/lrn_tools_key
+ssh-copy-id -i ~/.ssh/lrn_tools_key.pub user@remote-host</pre>
+      <p>Then set Auth Type to <strong>Key</strong> and Key Path to <code>~/.ssh/lrn_tools_key</code>.</p>
+    </div>
+    <div class="help-section">
+      <div class="help-title">lrn_tools on Remote Hosts</div>
+      <p>The tool scripts must exist on the remote host at the configured path. Clone the repo:</p>
+      <pre class="help-code">git clone https://github.com/mike0615/lrn_tools.git ~/dev/lrn_tools</pre>
+      <p>Use the <strong>Test</strong> button to verify both SSH connectivity and lrn_tools presence.</p>
+    </div>
+    <div class="help-section">
+      <div class="help-title">Password Authentication</div>
+      <p>Requires <code>sshpass</code> on this server. Passwords are stored in plain text in
+         <code>~/.lrn_tools/hosts.json</code> (chmod 600). Use key auth when possible.</p>
+      <pre class="help-code">dnf install sshpass</pre>
+    </div>
+  </div>
+
+</div>
+
+<script>
+async function testHost(hostId, btn) {
+  const resultEl  = document.getElementById(`test-result-${hostId}`);
+  const resultRow = document.getElementById(`test-row-${hostId}`);
+  resultRow.style.display = 'table-row';
+  resultEl.className = 'host-test-result testing';
+  resultEl.textContent = 'Testing connection…';
+  btn.disabled = true;
+
+  try {
+    const resp = await fetch(`/hosts/${hostId}/test`, { method: 'POST' });
+    const data = await resp.json();
+    resultEl.className = 'host-test-result ' + (data.success ? 'success' : 'failure');
+    resultEl.textContent = (data.success ? '✓ ' : '✗ ') + data.message;
+  } catch (e) {
+    resultEl.className = 'host-test-result failure';
+    resultEl.textContent = '✗ Request error: ' + e;
+  } finally {
+    btn.disabled = false;
+  }
+}
+</script>
+{% endblock %}
