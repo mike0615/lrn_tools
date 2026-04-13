@@ -29,7 +29,9 @@ except ImportError:
 
 from lib.registry import TOOLS, get_categories, get_tools_by_category, get_tool_by_id
 from lib.config import load_config
-from lib.hosts import HostManager, HostProfile, test_connection, tool_rel_path, run_remote, stream_remote
+from lib.hosts import (HostManager, HostProfile, test_connection,
+                       tool_rel_path, run_remote, stream_remote, deploy_lrn_tools)
+from lib.registry import _ROOT as LRN_LOCAL_PATH
 
 host_manager = HostManager()
 
@@ -271,6 +273,26 @@ def create_app(config_path=None):
     def host_delete(host_id):
         host_manager.delete(host_id)
         return redirect(url_for('hosts_page'))
+
+    @app.route('/hosts/<host_id>/deploy')
+    def host_deploy(host_id):
+        """Stream rsync deployment of lrn_tools to a remote host."""
+        profile = host_manager.get(host_id)
+        if not profile:
+            return "Host not found", 404
+
+        def gen_deploy():
+            for chunk in deploy_lrn_tools(profile, LRN_LOCAL_PATH):
+                if chunk.startswith('__EXIT__'):
+                    yield f"data: {json.dumps(chunk)}\n\n"
+                else:
+                    yield f"data: {json.dumps(chunk)}\n\n"
+
+        return Response(
+            stream_with_context(gen_deploy()),
+            mimetype='text/event-stream',
+            headers={'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no'},
+        )
 
     @app.route('/hosts/<host_id>/test', methods=['POST'])
     def host_test(host_id):
